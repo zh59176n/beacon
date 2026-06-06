@@ -1,0 +1,15 @@
+[project]
+name = "beacon"
+version = "0.1.0"
+description = "Beacon network monitoring and threat detection tool."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.120.0",
+    "uvicorn[standard]>=0.23.0",
+    "scapy>=2.7.0",
+    "pydantic>=2.7.0"
+]
+
+[project.scripts]
+beacon = "main:run"
