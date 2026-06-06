@@ -4,7 +4,7 @@ import time
 from collections import Counter, deque
 from datetime import datetime
 
-from scapy.all import DNS, DNSQR, ICMP, IP, TCP, UDP, sniff
+from scapy.all import DNS, DNSQR, ICMP, IP, TCP, UDP, conf, sniff
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("beacon")
@@ -143,7 +143,20 @@ class PacketMonitor:
         logger.info("Beacon packet monitor stopped")
 
     def _run_sniffer(self):
-        sniff(iface=self.interface, prn=self._capture_packet, store=False, stop_filter=lambda _: not self.running)
+        try:
+            sniff(iface=self.interface, prn=self._capture_packet, store=False, stop_filter=lambda _: not self.running)
+        except Exception:
+            logger.warning("Promiscuous mode failed, retrying without it")
+            conf.sniff_promisc = False
+            try:
+                sniff(iface=self.interface, prn=self._capture_packet, store=False, stop_filter=lambda _: not self.running)
+            except Exception as e:
+                logger.error("Packet capture unavailable: %s", e)
+
+    def get_packets(self, limit: int = 100) -> list:
+        with self.lock:
+            packets = list(self.packet_history)
+        return packets[-limit:]
 
     def get_metrics(self):
         with self.lock:
