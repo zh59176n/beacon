@@ -6,6 +6,8 @@ from datetime import datetime
 
 from scapy.all import DNS, DNSQR, ICMP, IP, TCP, UDP, conf, sniff
 
+from .storage import AlertStore
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("beacon")
 
@@ -27,7 +29,8 @@ class PacketMonitor:
         self.protocol_counts = Counter()
         self.total_bytes = 0
         self.total_packets = 0
-        self.alerts = deque(maxlen=100)
+        self.store = AlertStore()
+        self.alerts = deque(self.store.load_recent(), maxlen=100)
         self.key_events = deque(maxlen=500)
         self._listeners: list = []
 
@@ -85,6 +88,7 @@ class PacketMonitor:
         if self.alerts and self.alerts[-1]["message"] == message:
             return
         self.alerts.append(alert)
+        self.store.save(alert)
         logger.warning("Beacon alert: %s", message)
         self._notify({"type": "alert", "data": alert})
 
