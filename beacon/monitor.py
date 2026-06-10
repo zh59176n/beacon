@@ -29,6 +29,13 @@ class PacketMonitor:
         self.total_packets = 0
         self.alerts = deque(maxlen=100)
         self.key_events = deque(maxlen=500)
+        self._listeners: list = []
+
+    def add_listener(self, fn) -> None:
+        self._listeners.append(fn)
+
+    def remove_listener(self, fn) -> None:
+        self._listeners.remove(fn)
 
     def _detect_threats(self, event):
         now = time.time()
@@ -79,6 +86,14 @@ class PacketMonitor:
             return
         self.alerts.append(alert)
         logger.warning("Beacon alert: %s", message)
+        self._notify({"type": "alert", "data": alert})
+
+    def _notify(self, event: dict) -> None:
+        for fn in self._listeners:
+            try:
+                fn(event)
+            except Exception:
+                pass
 
     def _parse_packet(self, packet):
         if not packet.haslayer(IP):
@@ -127,6 +142,7 @@ class PacketMonitor:
             self.protocol_counts[event["protocol"]] += 1
             self.packet_history.append(event)
             self._detect_threats(event)
+        self._notify({"type": "packet", "data": event})
 
     def start(self):
         if self.running:

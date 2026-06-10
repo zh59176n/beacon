@@ -1,14 +1,50 @@
+import asyncio
+import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from .monitor import PacketMonitor
 
 monitor = PacketMonitor()
 
+
+class ConnectionManager:
+    def __init__(self):
+        self._clients: list[WebSocket] = []
+        self._loop: asyncio.AbstractEventLoop | None = None
+
+    def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
+
+    async def connect(self, ws: WebSocket) -> None:
+        await ws.accept()
+        self._clients.append(ws)
+
+    def disconnect(self, ws: WebSocket) -> None:
+        self._clients.remove(ws)
+
+    def broadcast_from_thread(self, event: dict) -> None:
+        if not self._clients or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(self._broadcast(json.dumps(event)), self._loop)
+
+    async def _broadcast(self, message: str) -> None:
+        for client in list(self._clients):
+            try:
+                await client.send_text(message)
+            except Exception:
+                self._clients.remove(client)
+
+
+manager = ConnectionManager()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    manager.set_loop(asyncio.get_event_loop())
+    monitor.add_listener(manager.broadcast_from_thread)
     monitor.start()
     yield
     monitor.stop()
@@ -62,3 +98,12 @@ def metrics():
 @app.get("/packets", response_model=list[PacketEvent])
 def packets(limit: int = 100):
     return monitor.get_packets(limit=min(limit, 500))
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await manager.connect(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(ws)
