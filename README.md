@@ -48,16 +48,3 @@ Beacon is a professional network monitoring and threat detection tool inspired b
 3. Implement threat heuristics for port scanning, DNS volume, repeated attempts, and suspicious patterns.
 4. Add a React dashboard for visualizing protocol distribution and alerts.
 5. Polish UI with a dark cybersecurity theme and subtle lighthouse-inspired status design.
-
-## Why Beacon is Valuable
-
-- **NYU Cybersecurity admissions**: demonstrates real network packet capture, protocol analysis, detection logic, and a clean API architecture.
-- **Entry-level recruiters**: shows practical knowledge of network protocols, Python tooling, threat heuristics, and the ability to deliver a polished monitoring product.
-- **Security analyst roles**: highlights situational awareness, alert generation, and risk scoring for SOC-style monitoring and incident detection.
-
-## Next Steps
-
-- Add persistent alert storage and event history.
-- Build a React dashboard to display protocol breakdown, risk score, and recent alerts.
-- Extend detection rules with baseline learning and threat scoring.
-- Add documentation for deployment, usage, and tuning.
